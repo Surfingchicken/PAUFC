@@ -4,6 +4,8 @@ export interface CreateVoteRequest {
   title: string;
   mode: string;
   comment?: string;
+  deadline: string;
+  majority: string;
   questions: {
     questionText: string;
     options: string[];
@@ -13,7 +15,9 @@ export interface CreateVoteRequest {
 export const createVoteValidation = Joi.object<CreateVoteRequest>({
   title: Joi.string().required(),
   mode: Joi.string().required(),
-  comment: Joi.string().optional(),
+  comment: Joi.string().allow(null, ''),
+  deadline: Joi.date().iso().required(), 
+  majority: Joi.string().required(),
   questions: Joi.array().items(
     Joi.object({
       questionText: Joi.string().required(),

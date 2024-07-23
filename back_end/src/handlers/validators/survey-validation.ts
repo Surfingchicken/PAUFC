@@ -7,6 +7,7 @@ export interface CreateSurveyRequest {
     options?: string[];
     type: 'radio' | 'text';
   }[];
+  deadline: string;
 }
 
 export const createSurveyValidation = Joi.object<CreateSurveyRequest>({
@@ -22,4 +23,16 @@ export const createSurveyValidation = Joi.object<CreateSurveyRequest>({
       type: Joi.string().valid('radio', 'text').required(),
     })
   ).required(),
+  deadline: Joi.string().isoDate().required(),
+});
+
+export interface CreateSurveyResponseRequest {
+  surveyId: number;
+  userId: number;
+  responses: string[];
+}
+
+export const createSurveyResponseValidation = Joi.object<CreateSurveyResponseRequest>({
+  surveyId: Joi.number().required(),
+  responses: Joi.array().items(Joi.string()).required(),
 });

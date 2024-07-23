@@ -20,8 +20,7 @@ export const authMiddleware = async(req: Request, res: Response, next: NextFunct
         }
         
         const secret = process.env.JWT_SECRET ?? "";
-        verify(token,secret,(err,user)=>{
-            console.log(err);            
+        verify(token,secret,(err,user)=>{        
             if (err) return res.status(403).json({"error": "Access Forbidden token non valide pour la vérif"});
             (req as any).user = user;
             next();

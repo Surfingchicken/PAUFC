@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../auth/AuthContext';
 import DocumentUploader from './DocumentUploader';
+import DocumentViewer from './DocumentViewer';
 
 interface Document {
   id: number;
   title: string;
   description: string;
-  text: string;
-  content: string;
+  category: string;
   fileUrl: string;
   createdAt: Date;
   updatedAt: Date;
@@ -17,28 +17,98 @@ interface Document {
 const Vault: React.FC = () => {
   const auth = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [years, setYears] = useState<number[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('-');
+  const [selectedYear, setSelectedYear] = useState<number | '-'>('-');
   const [showUploader, setShowUploader] = useState(false);
+  const [documentCount, setDocumentCount] = useState<number>(0);
 
-  const fetchDocuments = async () => {
+  useEffect(() => {
+    fetchCategories();
+    fetchDocumentCount(); 
+  }, []);
+
+  const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-
-      const response = await axios.get('http://localhost:3000/documents', {
+      const response = await axios.get('http://localhost:3000/documents/categories', {
         headers: {
           'Authorization': `Bearer ${token}`
         },
         withCredentials: true
       });
-      setDocuments(response.data.document);  
+      setCategories(response.data);
     } catch (error) {
-      alert('Error fetching documents:');
     }
   };
 
+  const fetchYears = async (category: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:3000/documents/years', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        params: { category },
+        withCredentials: true
+      });
+      setYears(response.data);
+    } catch (error) {
+    }
+  };
 
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:3000/documents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        params: { category: selectedCategory, year: selectedYear },
+        withCredentials: true
+      });
+      setDocuments(response.data.document);
+      setDocumentCount(response.data.document.length);
+    } catch (error) {
+    }
+  };
+
+  const fetchDocumentCount = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:3000/documents/count', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true
+      });
+      setDocumentCount(response.data.count);
+    } catch (error) {
+    }
+  };
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const category = e.target.value;
+    setSelectedCategory(category);
+    setSelectedYear('-');
+    if (category !== '-') {
+      fetchYears(category);
+    } else {
+      setYears([]);
+    }
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const year = e.target.value === '-' ? '-' : parseInt(e.target.value, 10);
+    setSelectedYear(year);
+  };
+
+  const handleSearch = () => {
+    if (selectedCategory !== '-' && selectedYear !== '-') {
+      fetchDocuments();
+    }
+  };
 
   const handleToggleUploader = () => {
     setShowUploader(!showUploader);
@@ -62,20 +132,40 @@ const Vault: React.FC = () => {
       )}
       
       <div>
+        <h3>Recherche de documents</h3>
+        <div>
+          <label>
+            Catégorie:
+            <select value={selectedCategory} onChange={handleCategoryChange}>
+              <option value="-">-</option>
+              {categories.map((category, index) => (
+                <option key={index} value={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>
+            Année:
+            <select value={selectedYear} onChange={handleYearChange} disabled={selectedCategory === '-'}>
+              <option value="-">-</option>
+              {years.map((year, index) => (
+                <option key={index} value={year}>{year}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button onClick={handleSearch} disabled={selectedCategory === '-' || selectedYear === '-'}>Rechercher</button>
+      </div>
+
+      <div>
         <h3>Documents</h3>
+        <p>Nombre de documents: {documentCount}</p>
         {documents.length > 0 ? (
           <ul>
             {documents.map((doc) => (
               <li key={doc.id}>
-                <h4>{doc.title}</h4>
-                <h4>{doc.content}</h4>
-                <h4>{doc.description}</h4>
-                <p>{doc.text}</p>
-                <a href={`http://localhost:3000/uploads/${doc.fileUrl.split('/').pop()}`} target="_blank" rel="noopener noreferrer">
-                  Télécharger le fichier
-                </a>
-                <p>Créé le: {new Date(doc.createdAt).toLocaleDateString()}</p>
-                <p>Mis à jour le: {new Date(doc.updatedAt).toLocaleDateString()}</p>
+                <DocumentViewer document={doc} />
               </li>
             ))}
           </ul>

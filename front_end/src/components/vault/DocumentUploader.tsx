@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 interface DocumentUploaderProps {
-  onUploadSuccess: () => void;  
+  onUploadSuccess: () => void;
 }
 
 const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onUploadSuccess }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [text, setText] = useState('');
-  const [content, setContent] = useState('');
+  const [category, setCategory] = useState('');
   const [file, setFile] = useState<File | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,26 +28,24 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onUploadSuccess }) 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    formData.append('text', text);
-    formData.append('content', content);
+    formData.append('category', category);
     formData.append('file', file);
 
     try {
+      const token = localStorage.getItem('token');
       const response = await axios.post('http://localhost:3000/documents', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Authorization': `Bearer ${token}`
+        },
       });
       setTitle('');
       setDescription('');
-      setText('');
-      setContent('');
+      setCategory('');
       setFile(null);
       (event.target as HTMLFormElement).reset();
-       
       onUploadSuccess();
-
     } catch (error) {
+      alert('Erreur lors de l\'upload du fichier.');
     }
   };
 
@@ -78,20 +75,11 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({ onUploadSuccess }) 
       </div>
       <div>
         <label>
-          Texte:
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            required
-          />
-        </label>
-      </div>
-      <div>
-        <label>
-          Contenu:
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+          Catégorie:
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
             required
           />
         </label>

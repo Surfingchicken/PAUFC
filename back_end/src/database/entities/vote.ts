@@ -15,6 +15,9 @@ export class Vote {
   @Column()
   mode: string;
 
+  @Column()
+  majority: string;  
+
   @Column({ nullable: true })
   comment?: string;
 
@@ -23,6 +26,9 @@ export class Vote {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Column()
+  deadline: Date;  
 
   @ManyToOne(() => User, user => user.id)
   createdBy: User;
@@ -33,14 +39,16 @@ export class Vote {
   @OneToMany(() => VoteResponse, response => response.vote)
   responses?: VoteResponse[];
 
-  constructor(id: number, title: string, mode: string, comment: string | undefined, createdBy: User, questions: VoteQuestion[], createdAt: Date, updatedAt: Date) {
+  constructor(id: number, title: string, mode: string, majority: string, comment: string | undefined, createdBy: User, questions: VoteQuestion[], createdAt: Date, updatedAt: Date, deadline: Date) {
     this.id = id;
     this.title = title;
     this.mode = mode;
+    this.majority = majority;
     this.comment = comment;
     this.createdBy = createdBy;
     this.questions = questions;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+    this.deadline = deadline;
   }
 }

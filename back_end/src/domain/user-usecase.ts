@@ -10,17 +10,8 @@ export interface listUserFilter{
 }
 
 export class UserUsecase{
-    constructor(private readonly db: DataSource) { }
+    constructor(private db: DataSource) { }
 
-
-    async getUserById(userId: number): Promise<User | null> {
-      const userRepository = this.db.getRepository(User);
-      const user = await userRepository.findOne({
-          where: { id: userId }
-      });
-      return user;
-  }
-  
     async userList(listUserFilter: listUserFilter): Promise<{ user: User[] }> {
         const query = this.db.getRepository(User)
           .createQueryBuilder('user')
@@ -53,6 +44,27 @@ export class UserUsecase{
           return user;
         }
         return null;
+      }
+
+      async updateProfile(userId: number, username?: string, password?: string): Promise<User> {
+        const userRepository = this.db.getRepository(User);
+        const user = await userRepository.findOneBy({ id: userId });
+    
+        if (!user) {
+          throw new Error("User not found");
+        }
+    
+        if (username) {
+          user.username = username;
+        }
+    
+        if (password) {
+          user.password = password;
+        }
+    
+        await userRepository.save(user);
+    
+        return user;
       }
     
 }

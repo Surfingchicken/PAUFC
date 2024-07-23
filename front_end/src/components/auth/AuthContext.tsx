@@ -1,17 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { decodeToken } from './jwtDecode';
-
-interface AuthContextType {
-  user: { name: string; role: string } | null;
-  checkUserRole: () => Promise<void>;
-  logout: () => void;
-}
+import AuthContextType from '../../interfaces/auth/AuthContextType';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string, contribution:number,toUpdateOn:Date } | null>(null);
 
   useEffect(() => {
     checkUserRole();
@@ -42,7 +37,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const users = response.data.user;
         const currentUser = users.find((user: any) => user.id === userId);
         if (currentUser) {
-          setUser({ name: currentUser.username, role: currentUser.roles.name });
+          setUser({ name: currentUser.username, role: currentUser.roles.name,  contribution : currentUser.contribution, toUpdateOn : currentUser.toUpdateOn });
         } else {
           setUser(null);
         }

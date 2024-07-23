@@ -18,6 +18,9 @@ export class Survey {
     @UpdateDateColumn()
     updatedAt: Date;
 
+    @Column({ type: 'datetime' })
+    deadline: Date;
+
     @ManyToOne(() => User, user => user.id)
     createdBy: User;
 
@@ -27,12 +30,13 @@ export class Survey {
     @OneToMany(() => SurveyResponse, response => response.survey)
     responses?: SurveyResponse[];
 
-    constructor(id: number, title: string, createdBy: User, questions: SurveyQuestion[], createdAt: Date, updatedAt: Date) {
+    constructor(id: number, title: string, createdBy: User, questions: SurveyQuestion[], createdAt: Date, updatedAt: Date, deadline: Date) {
         this.id = id;
         this.title = title;
         this.createdBy = createdBy;
         this.questions = questions;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.deadline = deadline;
     }
 }

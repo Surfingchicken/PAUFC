@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -17,35 +18,55 @@ const Login: React.FC = () => {
       localStorage.setItem('token', response.data.token);
       window.location.href = '/app';
     } catch (error) {
-      setError('Invalid credentials');
+      setError('Identifiant ou mot de passe incorrect');
     }
+  };
+
+  const signUpPage = async (event: React.FormEvent) => {
+    window.location.href = '/signup';
   };
 
   return (
     <div>
-      <h2>Login</h2>
+      <div className='header'>
+        <Link to="/">
+          <img src={`${process.env.PUBLIC_URL}/favicon.svg.png`} alt="Favicon" className='favicon'/>
+        </Link>
+        <h2>UFC Que Choisir</h2>
+      </div>
+      
       <form onSubmit={handleSubmit}>
-        <div>
-          <label>Username:</label>
+         
+          <label>Nom d'utilisateur </label>
+          <br/>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-          />
-        </div>
-        <div>
-          <label>Password:</label>
+          /> 
+          <br/>
+          <br/>
+
+          <label>Mot de passe </label>
+          <br/>
+          
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </div>
-        {error && <p>{error}</p>}
-        <button type="submit">Login</button>
+        <br/>
+
+        {error && <p className='error'>{error}</p>}
+        <button type="submit">Se connecter</button>
+        <br/>
+        <br/>
+        <hr/>  
+        <br/>
       </form>
+      <button type="button" onClick={signUpPage}>Créer un compte</button>
     </div>
   );
 };

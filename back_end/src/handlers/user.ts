@@ -1,4 +1,4 @@
-import  express, { Request, Response } from "express";
+import express, { Request, Response } from "express";
 import { AppDataSource } from "../database/database";
 import { createUserValidation, loginUserValidation } from "./validators/user-validator";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
@@ -6,100 +6,114 @@ import { User } from "../database/entities/user";
 import { compare, hash } from "bcrypt";
 import { sign } from "jsonwebtoken";
 import { Token } from "../database/entities/token";
-import { getRepository } from "typeorm";
 import { Role } from "../database/entities/roles";
 import { authMiddleware } from "./middleware/auth-middleware";
-
 
 export const UserHandler = (app: express.Express) => {
     // Créer un nouvel utilisateur
     app.post('/auth/signup', async (req: Request, res: Response) => {
         try {
-          const userValidation = createUserValidation.validate(req.body);
-          if (userValidation.error) {
-            res.status(400).send(generateValidationErrorMessage(userValidation.error.details));
-            return;
-          }
-      
-          const createUserRequest = userValidation.value;
-          const hashedPassword = await hash(createUserRequest.password, 10);
-      
-          const userRepository = AppDataSource.getRepository(User);
-          const roleRepository = AppDataSource.getRepository(Role);
-      
-          // Rechercher le rôle par ID
-          const role = await roleRepository.findOneBy({ id: 2 }); // Utiliser l'ID du rôle que vous souhaitez assigner
-      
-          if (!role) {
-            res.status(400).send({ error: 'Role not found' });
-            return;
-          }
-      
-          // Créer un nouvel utilisateur avec le rôle trouvé
-          const user = userRepository.create({
-            username: createUserRequest.username,
-            email: createUserRequest.email,
-            password: hashedPassword,
-            roles: role, // Assigner le rôle trouvé
-          });
-      
-          await userRepository.save(user);
-      
-          res.status(201).send({ id: user.id, email: user.email, role: user.roles });
-        } catch (error) {
-          console.log(error);
-          res.status(500).send({ error: 'Internal error retry later' });
-        }
-      });
-      
+            const { error, value } = createUserValidation.validate(req.body);
+            if (error) {
+                return res.status(400).send(generateValidationErrorMessage(error.details));
+            }
 
-    // Connexion d'un utilisateur
-    app.post('/auth/login', async(req:Request, res: Response) => {
-        try {
-            const userValidation = loginUserValidation.validate(req.body);
-            if(userValidation.error){
-                res.status(400).send(generateValidationErrorMessage(userValidation.error.details));
-                return;
-            }
-            const loginUserRequest = userValidation.value;
-            const user = await AppDataSource.getRepository(User).findOneBy({username: loginUserRequest.username});
-            if (!user) {
-                res.status(400).send({ error: " Le premier username or password not valid" })
-                return
-            }
-            // valid password for this user
-            const isValid = await compare(loginUserRequest.password, user.password);
-            if (!isValid) {
-                res.status(400).send({ error: "Le username or password not valid" })
-                return
-            }
-            const secret = process.env.JWT_SECRET ?? ""
-            const token = sign({ userId: user.id, username: user.username, roles: user.roles.id}, secret, { expiresIn: '1d' });
-            await AppDataSource.getRepository(Token).save({ token: token, user: user })
-            
-            res.status(200).json({ token });
-        } catch (error) {
+            const { username, email, password } = value;
 
-            console.log(error);
-            res.status(500).send({ "error": "internal error retry later" });
-            return;
+            const hashedPassword = await hash(password, 10);
+
+            const userRepository = AppDataSource.getRepository(User);
+            const roleRepository = AppDataSource.getRepository(Role);
+
+            const existingUsername = await userRepository.findOneBy({ username });
+            if (existingUsername) {
+                return res.status(400).send({ error: "Le nom d'utilisateur est déjà utilisé" });
+            }
+     
+            const existingEmail = await userRepository.findOneBy({ email });
+            if (existingEmail) {
+                return res.status(400).send({ error: "L'email est déjà utilisé" });
+            }
+
+            // Rechercher le rôle par ID
+            const role = await roleRepository.findOneBy({ id: 3 }); // Utiliser l'ID du rôle que vous souhaitez assigner
+
+            if (!role) {
+                return res.status(400).send({ error: 'Role not found' });
+            }
+
+            // Créer un nouvel utilisateur avec le rôle trouvé
+            const user = userRepository.create({
+                username,
+                email,
+                password: hashedPassword,
+                roles: role, // Assigner le rôle trouvé
+            });
+
+
+            await userRepository.save(user);
+
+            const secret = process.env.JWT_SECRET ?? "";
+            const token = sign({ userId: user.id, username: user.username, roles: user.roles.id }, secret, { expiresIn: '1d' });
+
+            const tokenRepository = AppDataSource.getRepository(Token);
+            await tokenRepository.save({ token, user });
+
+            return res.status(200).json({ token });
+        } catch (error) { 
+            return res.status(500).send({ error: 'Internal error retry later' });
         }
     });
 
-    app.delete('/logout', authMiddleware, async(req: Request, res: Response) => {
+    // Connexion d'un utilisateur
+    app.post('/auth/login', async (req: Request, res: Response) => {
         try {
-            // Objectif : supprimer le token de l'utilisateur
-            // Définir le repository
+            const { error, value } = loginUserValidation.validate(req.body);
+            if (error) {
+                return res.status(400).send(generateValidationErrorMessage(error.details));
+            }
+
+            const { username, password } = value;
+            const userRepository = AppDataSource.getRepository(User);
+            const user = await userRepository.findOneBy({ username });
+
+            if (!user) {
+                return res.status(400).send({ error: "Invalid username or password" });
+            }
+
+            // Validate password for this user
+            const isValidPassword = await compare(password, user.password);
+            if (!isValidPassword) {
+                return res.status(400).send({ error: "Invalid username or password" });
+            }
+
+            const secret = process.env.JWT_SECRET ?? "";
+            const token = sign({ userId: user.id, username: user.username, roles: user.roles.id }, secret, { expiresIn: '1d' });
+
+            const tokenRepository = AppDataSource.getRepository(Token);
+            await tokenRepository.save({ token, user });
+
+            return res.status(200).json({ token });
+        } catch (error) { 
+            return res.status(500).send({ error: "Internal error retry later" });
+        }
+    });
+
+    app.delete('/logout', authMiddleware, async (req: Request, res: Response) => {
+        try {
             const tokenRepository = AppDataSource.getRepository(Token);
             const authToken = req.headers.authorization;
-            const token = authToken!.replace(/"/g, '').split(' ')[1];
-            await tokenRepository.delete({token: token})
-            res.status(201).send({message : "Déconnexion réussie"});
-           
-        } catch (error) {
-            console.log(error);
-            res.status(500).send({ "error": "pas connecté : internal error retry later" });
-            return;
+
+            if (!authToken) {
+                return res.status(401).send({ error: "Unauthorized" });
+            }
+
+            const token = authToken.replace(/"/g, '').split(' ')[1];
+            await tokenRepository.delete({ token });
+
+            return res.status(201).send({ message: "Déconnexion réussie" });
+        } catch (error) { 
+            return res.status(500).send({ error: "Internal error retry later" });
         }
-    })
-}
+    });
+};

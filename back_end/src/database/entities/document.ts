@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User } from './user';
 
 @Entity()
@@ -13,10 +13,10 @@ export class Document {
   description: string;
 
   @Column()
-  text: string;
+  category: string;  
 
   @Column()
-  content: string;
+  originalName: string; 
 
   @Column()
   fileUrl: string;
@@ -30,13 +30,13 @@ export class Document {
   @ManyToOne(() => User, user => user)
   createdBy: User;
 
-  constructor(id: number, title:string, description: string, text: string, content: string, fileUrl: string, createdBy: User, createdAt: Date, updatedAt:Date) {
+  constructor(id: number, title: string, description: string, category: string, originalName: string, fileUrl: string, createdBy: User, createdAt: Date, updatedAt: Date) {
     this.id = id;
     this.title = title;
     this.description = description;
-    this.text = text;
-    this.content = content;
-    this.fileUrl = fileUrl; 
+    this.category = category;
+    this.originalName = originalName;
+    this.fileUrl = fileUrl;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;

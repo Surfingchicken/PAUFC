@@ -9,8 +9,7 @@ export const roleMiddleware = async(req: Request, res: Response, next: NextFunct
       const authSeparation = auth!.split('.')[1];
       const decodedPayload = Buffer.from(authSeparation, 'base64').toString('utf-8');
       const user = JSON.parse(decodedPayload);
-      const userRole = user.roles;
-      console.log(`le role de l'utilisateur est ${userRole}`);
+      const userRole = user.roles; 
       
     if(userRole != 1){
         return res.status(401).json({"error": "Permission insuffisante !"});    

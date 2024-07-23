@@ -4,22 +4,22 @@ import { Survey } from "./Survey";
 
 @Entity()
 export class SurveyResponse {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column("simple-array")
-    responses: string[];
+  @Column("simple-array")
+  responses: string[];
 
-    @ManyToOne(() => Survey, survey => survey.responses)
-    survey: Survey;
+  @ManyToOne(() => Survey, survey => survey.responses)
+  survey: Survey;
 
-    @ManyToOne(() => User, user => user.id)
-    user: User;
+  @ManyToOne(() => User, user => user.id)
+  user: User;
 
-    constructor(id: number, responses: string[], survey: Survey, user: User) {
-        this.id = id;
-        this.responses = responses;
-        this.survey = survey;
-        this.user = user;
-    }
+  constructor(id: number, responses: string[], survey: Survey, user: User) {
+    this.id = id;
+    this.responses = responses;
+    this.survey = survey;
+    this.user = user;
+  }
 }

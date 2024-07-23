@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './components/auth/AuthContext';
-import SurveyCreator from './components/SurveyCreator';
-import SurveyResponse from './components/SurveyResponse';
-import SurveyResults from './components/SurveyResults';
-import VoteCreator from './components/VoteCreator';
-import VoteResponse from './components/VoteResponse';
-import VoteResults from './components/VoteResults';
+import SurveyCreator from './components/survey/SurveyCreator';
+import SurveyResponse from './components/survey/SurveyResponse';
+import SurveyResults from './components/survey/SurveyResults';
+import VoteCreator from './components/vote/VoteCreator';
+import VoteResponse from './components/vote/VoteResponse';
+import VoteResults from './components/vote/VoteResults';
 import Vault from './components/vault/Vault';
-import UserManager from './components/UserManager';
-import './App.css';
+import UserManager from './components/manager/UserManager';
+import CreateAG from './components/ag/CreateAG';
+import Profile from './components/profile/Profile';
+import './styles/App.css';
 
 interface SurveyQuestion {
   questionText: string;
@@ -21,26 +23,30 @@ interface Survey {
   id: number;
   title: string;
   questions: SurveyQuestion[];
+  deadline: string;
 }
 
 interface VoteQuestion {
   questionText: string;
-  options: string[];
+  options: { id: number, text: string }[];
 }
 
 interface Vote {
+  id: number;
   title: string;
   questions: VoteQuestion[];
   mode: string;
   comment?: string;
+  deadline: string;
+  majority: string;
 }
 
 const AppContent: React.FC = () => {
   const [surveys, setSurveys] = useState<Survey[]>([]);
-  const [surveyResponses, setSurveyResponses] = useState<string[][][]>([]);
+  const [surveyResponses, setSurveyResponses] = useState<{ [key: number]: string[][] }>({});
   const [votes, setVotes] = useState<Vote[]>([]);
-  const [voteResponses, setVoteResponses] = useState<string[][][]>([]);
-  const [currentView, setCurrentView] = useState<'surveys' | 'votes' | 'vault' | 'usermanager' | null>(null);
+  const [voteResponses, setVoteResponses] = useState<{ [key: number]: any[] }>({});
+  const [currentView, setCurrentView] = useState<'surveys' | 'votes' | 'vault' | 'usermanager' | 'createag' | 'profile' | null>('profile');
   const [showSurveyResults, setShowSurveyResults] = useState<boolean[]>([]);
   const [showVoteResults, setShowVoteResults] = useState<boolean[]>([]);
   const auth = useAuth();
@@ -54,18 +60,34 @@ const AppContent: React.FC = () => {
             'Authorization': `Bearer ${token}`
           },
         });
-  
+
         if (response.data && Array.isArray(response.data.surveys)) {
           setSurveys(response.data.surveys);
-        } else {
-          console.error('Unexpected response format:', response.data);
-        }
+        } 
       } catch (error) {
-        console.error('Error fetching surveys:', error);
       }
     };
-  
+
+    const fetchVotes = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:3000/votes', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+        });
+
+        if (response.data && Array.isArray(response.data.votes)) {
+          setVotes(response.data.votes);
+        } else {
+
+        }
+      } catch (error) {
+      }
+    };
+
     fetchSurveys();
+    fetchVotes();
   }, [auth.user]);
 
   const addSurvey = (surveyData: { title: string; questions: SurveyQuestion[] }) => {
@@ -75,49 +97,111 @@ const AppContent: React.FC = () => {
         'Authorization': `Bearer ${token}`
       },
     })
-    .then(response => {
-      const newSurvey = response.data;
-      setSurveys([...surveys, newSurvey]);
-      setShowSurveyResults([...showSurveyResults, false]);
-    })
-    .catch(error => {
-      console.error('Error creating survey:', error);
-    });
+      .then(response => {
+        const newSurvey = response.data;
+        setSurveys([...surveys, newSurvey]);
+        setShowSurveyResults([...showSurveyResults, false]);
+      })
+      .catch(error => {
+      });
   };
 
   const handleSurveyResponseSubmit = (surveyIndex: number, response: string[]) => {
-    const newResponses = [...surveyResponses];
-    if (!newResponses[surveyIndex]) {
-      newResponses[surveyIndex] = [];
+    const surveyId = surveys[surveyIndex].id;
+    const newResponses = { ...surveyResponses };
+    if (!newResponses[surveyId]) {
+      newResponses[surveyId] = [];
     }
-    newResponses[surveyIndex].push(response);
+    newResponses[surveyId].push(response);
     setSurveyResponses(newResponses);
   };
 
-  const addVote = (vote: Vote) => {
-    setVotes([...votes, vote]);
-    setShowVoteResults([...showVoteResults, false]);
-  };
+  const fetchSurveyResponses = async (surveyId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:3000/survey-responses/${surveyId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+      });
 
-  const handleVoteResponseSubmit = (voteIndex: number, response: string[]) => {
-    const newResponses = [...voteResponses];
-    if (!newResponses[voteIndex]) {
-      newResponses[voteIndex] = [];
+      if (response.data && Array.isArray(response.data.responses)) {
+        setSurveyResponses(prevResponses => ({
+          ...prevResponses,
+          [surveyId]: response.data.responses,
+        }));
+      } else {
+      }
+    } catch (error) {
     }
-    newResponses[voteIndex].push(response);
-    setVoteResponses(newResponses);
   };
 
-  const toggleSurveyResults = (index: number) => {
+  const toggleSurveyResults = async (index: number) => {
+    const surveyId = surveys[index].id;
     const newShowSurveyResults = [...showSurveyResults];
     newShowSurveyResults[index] = !newShowSurveyResults[index];
     setShowSurveyResults(newShowSurveyResults);
+
+    if (newShowSurveyResults[index] && !surveyResponses[surveyId]) {
+      await fetchSurveyResponses(surveyId);
+    }
   };
 
-  const toggleVoteResults = (index: number) => {
+  const addVote = (voteData: Vote) => {
+    const token = localStorage.getItem('token');
+    axios.post('http://localhost:3000/votes', voteData, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+    })
+      .then(response => {
+        const newVote = response.data;
+        setVotes([...votes, newVote]);
+        setShowVoteResults([...showVoteResults, false]);
+      })
+      .catch(error => {
+      });
+  };
+
+  const handleVoteResponseSubmit = (voteIndex: number, response: string[]) => {
+    const voteId = votes[voteIndex].id;
+    const newResponses = { ...voteResponses };
+    if (!newResponses[voteId]) {
+      newResponses[voteId] = [];
+    }
+    newResponses[voteId].push({ responses: response });
+    setVoteResponses(newResponses);
+  };
+
+  const fetchVoteResponses = async (voteId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:3000/vote-responses/${voteId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (response.data && Array.isArray(response.data.responses)) {
+        setVoteResponses(prevResponses => ({
+          ...prevResponses,
+          [voteId]: response.data.responses,
+        }));
+      } else {
+      }
+    } catch (error) {
+    }
+  };
+
+  const toggleVoteResults = async (index: number) => {
+    const voteId = votes[index].id;
     const newShowVoteResults = [...showVoteResults];
     newShowVoteResults[index] = !newShowVoteResults[index];
     setShowVoteResults(newShowVoteResults);
+
+    if (newShowVoteResults[index] && !voteResponses[voteId]) {
+      await fetchVoteResponses(voteId);
+    }
   };
 
   const handleLogout = async () => {
@@ -129,13 +213,33 @@ const AppContent: React.FC = () => {
         },
       });
       localStorage.removeItem('token');
-      window.location.href = '/login';  
+      window.location.href = '/login';
     } catch (error) {
-      console.error('Error logging out:', error);
+    }
+  }; 
+
+  const checkContributionStatus = () => {
+    if (auth.user?.toUpdateOn) {
+      const today = new Date();
+      const toUpdateOn = new Date(auth.user.toUpdateOn); 
+      if (today >= toUpdateOn) {
+        const token = localStorage.getItem('token');
+        axios.post('http://localhost:3000/no-contributions', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+        })
+      }
     }
   };
 
+  useEffect(() => {
+    checkContributionStatus();
+  }, [auth.user]);
+
   return (
+    <>
+    {auth.user?.contribution && 
     <div className="app-container">
       <div className="sidebar">
         <button onClick={() => setCurrentView('surveys')}>Sondages</button>
@@ -144,29 +248,36 @@ const AppContent: React.FC = () => {
           <>
             <button onClick={() => setCurrentView('vault')}>Coffre-fort</button>
             {auth.user?.role === 'admin' && (
-              <button onClick={() => setCurrentView('usermanager')}>Gestion des utilisateurs</button>
+              <>
+                <button onClick={() => setCurrentView('usermanager')}>Gestion des utilisateurs</button>
+                <button onClick={() => setCurrentView('createag')}>Assemblée Générale</button>
+                <button onClick={() => setCurrentView('profile')}>Profil</button>
+              </>
             )}
           </>
         )}
         <button onClick={handleLogout}>Déconnexion</button>
       </div>
-      <div className="main-content">
+
+      <div className="main-content-home">
         {currentView === 'surveys' && (
           <>
             {auth.user?.role === 'admin' && <SurveyCreator onAddSurvey={addSurvey} />}
             {Array.isArray(surveys) && surveys.map((survey, index) => (
-              <div key={survey.id}>
-                <h3>{survey.title}</h3>
-                <button onClick={() => toggleSurveyResults(index)}>
-                  {showSurveyResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
-                </button>
-                {showSurveyResults[index] && (
-                  <SurveyResults survey={survey} responses={surveyResponses[index] || []} />
-                )}
+              <div key={survey.id}> 
+                <br/>
                 <SurveyResponse
                   survey={survey}
                   onSubmit={(response) => handleSurveyResponseSubmit(index, response)}
                 />
+
+                <button onClick={() => toggleSurveyResults(index)}>
+                  {showSurveyResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
+                </button>
+                {showSurveyResults[index] && (
+                  <SurveyResults survey={survey} responses={surveyResponses[survey.id] || []} />
+                )}
+                 <hr/>
               </div>
             ))}
           </>
@@ -176,20 +287,20 @@ const AppContent: React.FC = () => {
           <>
             {auth.user?.role === 'admin' && <VoteCreator onAddVote={addVote} />}
             {votes.map((vote, index) => (
-              <div key={index}>
-                <h3>{vote.title}</h3>
-                <p>Modalité de vote: {vote.mode}</p>
+              <div key={vote.id}>  
                 {vote.comment && <p>Commentaire: {vote.comment}</p>}
-                <button onClick={() => toggleVoteResults(index)}>
-                  {showVoteResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
-                </button>
-                {showVoteResults[index] && (
-                  <VoteResults vote={vote} responses={voteResponses[index] || []} />
-                )}
+                
                 <VoteResponse
                   vote={vote}
                   onSubmit={(response) => handleVoteResponseSubmit(index, response)}
                 />
+               <button onClick={() => toggleVoteResults(index)}>
+                  {showVoteResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
+                </button>
+                {showVoteResults[index] && (
+                  <VoteResults vote={vote} responses={voteResponses[vote.id] || []} />
+                )}
+                <hr/>
               </div>
             ))}
           </>
@@ -198,8 +309,19 @@ const AppContent: React.FC = () => {
         {currentView === 'vault' && <Vault />}
 
         {currentView === 'usermanager' && <UserManager />}
+
+        {currentView === 'createag' && <CreateAG />}
+
+        {currentView === 'profile' && <Profile />}
       </div>
     </div>
+    }
+    {!auth.user?.contribution && 
+    <div>
+      <Profile />
+      <button onClick={handleLogout}>Déconnexion</button>
+    </div>}
+    </>
   );
 };
 
