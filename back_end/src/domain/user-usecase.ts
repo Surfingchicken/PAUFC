@@ -37,21 +37,24 @@ export class UserUsecase{
         }
     }
 
-    async updateUserRole(userId: number, roleId: number): Promise<User | null> {
-        const userRepository = this.db.getRepository(User);
-        const roleRepository = this.db.getRepository(Role);
+    async updateUserRole(userId: number, roleId: number, toBlockOn?: string): Promise<User | null> {
+      const userRepository = this.db.getRepository(User);
+      const roleRepository = this.db.getRepository(Role);
     
-        const user = await userRepository.findOneBy({ id: userId });
-        const role = await roleRepository.findOneBy({ id: roleId });
+      const user = await userRepository.findOneBy({ id: userId });
+      const role = await roleRepository.findOneBy({ id: roleId });
     
-        if (user && role) {
-          user.roles = role;
-          await userRepository.save(user);
-          return user;
+      if (user && role) {
+        user.roles = role;
+        if (toBlockOn) {
+          user.toBlockOn = new Date(toBlockOn); 
         }
-        return null;
+        await userRepository.save(user);
+        return user;
       }
-
+      return null;
+    }
+    
       async updateProfile(userId: number, username?: string, password?: string): Promise<User> {
         const userRepository = this.db.getRepository(User);
         const user = await userRepository.findOneBy({ id: userId });

@@ -31,7 +31,10 @@ export class User {
     @Column({ type: 'datetime',nullable: true })
     toUpdateOn: Date;
 
-    constructor(id: number, username: string, email: string, password: string, tokens: Token[], roles: Role,contribution:boolean,toUpdateOn: Date) {
+    @Column({ type: 'datetime',nullable: true })
+    toBlockOn: Date;
+
+    constructor(id: number, username: string, email: string, password: string, tokens: Token[], roles: Role,contribution:boolean,toUpdateOn: Date,toBlockOn:Date) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -40,5 +43,6 @@ export class User {
         this.roles = roles;
         this.contribution = contribution;
         this.toUpdateOn = toUpdateOn;
+        this.toBlockOn = toBlockOn;
     }
 }

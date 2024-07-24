@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 interface User {
   id: number;
   username: string;
-  email:string;
+  email: string;
   roles: {
     id: number;
     name: string;
@@ -15,6 +15,9 @@ interface User {
 const UserManager: React.FC = () => {
   const auth = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [tempEndDate, setTempEndDate] = useState<string>('');
+  const [tempEndTime, setTempEndTime] = useState<string>('');
 
   const fetchUsers = async () => {
     try {
@@ -34,7 +37,11 @@ const UserManager: React.FC = () => {
   const updateUserRole = async (userId: number, newRoleId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:3000/users/${userId}/role`, { roleId: parseInt(newRoleId) }, {
+      const data: any = { roleId: parseInt(newRoleId) };
+      if (newRoleId === "4" && tempEndDate && tempEndTime) {
+        data.toBlockOn = `${tempEndDate}T${tempEndTime}`;
+      }
+      await axios.put(`http://localhost:3000/users/${userId}/role`, data, {
         headers: {
           'Authorization': `Bearer ${token}`
         },
@@ -61,6 +68,18 @@ const UserManager: React.FC = () => {
     }
   };
 
+  const handleRoleChange = (userId: number, newRoleId: string) => {
+    setSelectedUser(userId);
+    if (newRoleId === "4") {
+      setTempEndDate('');
+      setTempEndTime('');
+    } else {
+      setTempEndDate('');
+      setTempEndTime('');
+    }
+    updateUserRole(userId, newRoleId);
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -79,12 +98,29 @@ const UserManager: React.FC = () => {
               <p>Username: {user.username}</p>
               <p>Email: {user.email}</p>
               <p>Role: {user.roles.name}</p>
-              <select value={user.roles.id} onChange={(e) => updateUserRole(user.id, e.target.value)}>
+              <select value={user.roles.id} onChange={(e) => handleRoleChange(user.id, e.target.value)}>
                 <option value="1">Admin</option>
                 <option value="2">User</option>
                 <option value="3">Read-only</option>
+                <option value="4">Temp-user</option>
               </select>
-              <br/>
+              {selectedUser === user.id && user.roles.id === 4 && (
+                <div>
+                  <label>Date de fin :</label>
+                  <input
+                    type="date"
+                    value={tempEndDate}
+                    onChange={(e) => setTempEndDate(e.target.value)}
+                  />
+                  <input
+                    type="time"
+                    value={tempEndTime}
+                    onChange={(e) => setTempEndTime(e.target.value)}
+                  />
+                  <button onClick={() => updateUserRole(user.id, "4")}>Mettre à jour</button>
+                </div>
+              )}
+              <br />
               <button onClick={() => deleteUser(user.id)}>Supprimer</button>
             </li>
           ))}

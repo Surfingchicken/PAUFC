@@ -49,6 +49,7 @@ const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<'surveys' | 'votes' | 'vault' | 'usermanager' | 'createag' | 'profile' | null>('profile');
   const [showSurveyResults, setShowSurveyResults] = useState<boolean[]>([]);
   const [showVoteResults, setShowVoteResults] = useState<boolean[]>([]);
+  const [isBlocked, setIsBlocked] = useState(false);
   const auth = useAuth();
 
   useEffect(() => {
@@ -63,7 +64,7 @@ const AppContent: React.FC = () => {
 
         if (response.data && Array.isArray(response.data.surveys)) {
           setSurveys(response.data.surveys);
-        } 
+        }
       } catch (error) {
       }
     };
@@ -216,111 +217,128 @@ const AppContent: React.FC = () => {
       window.location.href = '/login';
     } catch (error) {
     }
-  }; 
+  };  
 
   const checkContributionStatus = () => {
-    if (auth.user?.toUpdateOn) {
+    if (auth.user && (!auth.user.toBlockOn || new Date(auth.user.toBlockOn).getTime() === 0)) {
+      setIsBlocked(false);
+    } else if (auth.user) {
       const today = new Date();
-      const toUpdateOn = new Date(auth.user.toUpdateOn); 
-      if (today >= toUpdateOn) {
-        const token = localStorage.getItem('token');
-        axios.post('http://localhost:3000/no-contributions', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-        })
+      const toBlockOn = new Date(auth.user.toBlockOn);
+      console.log(today)
+      console.log(toBlockOn)
+      if (today >= toBlockOn) {
+        setIsBlocked(true);
+      } else {
+        setIsBlocked(false);
       }
     }
   };
+  
+  
 
   useEffect(() => {
     checkContributionStatus();
   }, [auth.user]);
 
-  return (
-    <>
-    {auth.user?.contribution && 
-    <div className="app-container">
-      <div className="sidebar">
-        <button onClick={() => setCurrentView('surveys')}>Sondages</button>
-        <button onClick={() => setCurrentView('votes')}>Votes</button>
-        {(auth.user?.role === 'admin' || auth.user?.role === 'readonly') && (
-          <>
-            <button onClick={() => setCurrentView('vault')}>Coffre-fort</button>
-            {auth.user?.role === 'admin' && (
-              <>
-                <button onClick={() => setCurrentView('usermanager')}>Gestion des utilisateurs</button>
-                <button onClick={() => setCurrentView('createag')}>Assemblée Générale</button>
-                <button onClick={() => setCurrentView('profile')}>Profil</button>
-              </>
-            )}
-          </>
-        )}
+  if (isBlocked) {
+    return (
+      <div>
+        <p>Accès bloqué</p>
         <button onClick={handleLogout}>Déconnexion</button>
       </div>
+    );
+  }
 
-      <div className="main-content-home">
-        {currentView === 'surveys' && (
-          <>
-            {auth.user?.role === 'admin' && <SurveyCreator onAddSurvey={addSurvey} />}
-            {Array.isArray(surveys) && surveys.map((survey, index) => (
-              <div key={survey.id}> 
-                <br/>
-                <SurveyResponse
-                  survey={survey}
-                  onSubmit={(response) => handleSurveyResponseSubmit(index, response)}
-                />
+  return (
+    <>
+      <div className="app-container">
+        <div className="sidebar">
+          <button onClick={() => setCurrentView('surveys')}>Sondages</button>
+          <button onClick={() => setCurrentView('votes')}>Votes</button>
+          {(auth.user?.role === 'admin' || auth.user?.role === 'user' || auth.user?.role === 'readonly' || auth.user?.role === 'temp-user') && (
+            <>
+              <button onClick={() => setCurrentView('vault')}>Coffre-fort</button>
+              {auth.user?.role === 'admin' && (
+                <>
+                  <button onClick={() => setCurrentView('usermanager')}>Gestion des utilisateurs</button>
+                  <button onClick={() => setCurrentView('createag')}>Assemblée Générale</button>
+                  <button onClick={() => setCurrentView('profile')}>Profil</button>
+                </>
+              )}
+            </>
+          )}
+          {(auth.user?.role === 'user') && (
+            <>
+              <button onClick={() => setCurrentView('createag')}>Assemblée Générale</button>
+              <button onClick={() => setCurrentView('profile')}>Profil</button>
+            </>
+          )}
+          {(auth.user?.role === 'readonly' || auth.user?.role === 'temp-user') && (
+            <>
+              <button onClick={() => setCurrentView('profile')}>Profil</button>
+            </>
+          )}
 
-                <button onClick={() => toggleSurveyResults(index)}>
-                  {showSurveyResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
-                </button>
-                {showSurveyResults[index] && (
-                  <SurveyResults survey={survey} responses={surveyResponses[survey.id] || []} />
-                )}
-                 <hr/>
-              </div>
-            ))}
-          </>
-        )}
+          <button onClick={handleLogout}>Déconnexion</button>
+        </div>
 
-        {currentView === 'votes' && (
-          <>
-            {auth.user?.role === 'admin' && <VoteCreator onAddVote={addVote} />}
-            {votes.map((vote, index) => (
-              <div key={vote.id}>  
-                {vote.comment && <p>Commentaire: {vote.comment}</p>}
-                
-                <VoteResponse
-                  vote={vote}
-                  onSubmit={(response) => handleVoteResponseSubmit(index, response)}
-                />
-               <button onClick={() => toggleVoteResults(index)}>
-                  {showVoteResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
-                </button>
-                {showVoteResults[index] && (
-                  <VoteResults vote={vote} responses={voteResponses[vote.id] || []} />
-                )}
-                <hr/>
-              </div>
-            ))}
-          </>
-        )}
+        <div className="main-content-home">
+          {currentView === 'surveys' && (
+            <>
+              {auth.user?.role === 'admin' || auth.user?.role === 'user' && <SurveyCreator onAddSurvey={addSurvey} />}
+              {Array.isArray(surveys) && surveys.map((survey, index) => (
+                <div key={survey.id}>
+                  <br />
+                  <SurveyResponse
+                    survey={survey}
+                    onSubmit={(response) => handleSurveyResponseSubmit(index, response)}
+                  />
 
-        {currentView === 'vault' && <Vault />}
+                  <button onClick={() => toggleSurveyResults(index)}>
+                    {showSurveyResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
+                  </button>
+                  {showSurveyResults[index] && (
+                    <SurveyResults survey={survey} responses={surveyResponses[survey.id] || []} />
+                  )}
+                  <hr />
+                </div>
+              ))}
+            </>
+          )}
 
-        {currentView === 'usermanager' && <UserManager />}
+          {currentView === 'votes' && (
+            <>
+              {auth.user?.role === 'admin' || auth.user?.role === 'user' && <VoteCreator onAddVote={addVote} />}
+              {votes.map((vote, index) => (
+                <div key={vote.id}>
+                  {vote.comment && <p>Commentaire: {vote.comment}</p>}
 
-        {currentView === 'createag' && <CreateAG />}
+                  <VoteResponse
+                    vote={vote}
+                    onSubmit={(response) => handleVoteResponseSubmit(index, response)}
+                  />
+                  <button onClick={() => toggleVoteResults(index)}>
+                    {showVoteResults[index] ? "Masquer les résultats" : "Afficher les résultats"}
+                  </button>
+                  {showVoteResults[index] && (
+                    <VoteResults vote={vote} responses={voteResponses[vote.id] || []} />
+                  )}
+                  <hr />
+                </div>
+              ))}
+            </>
+          )}
 
-        {currentView === 'profile' && <Profile />}
+          {currentView === 'vault' && <Vault />}
+
+          {currentView === 'usermanager' && <UserManager />}
+
+          {currentView === 'createag' && <CreateAG />}
+
+          {currentView === 'profile' && <Profile />}
+        </div>
       </div>
-    </div>
-    }
-    {!auth.user?.contribution && 
-    <div>
-      <Profile />
-      <button onClick={handleLogout}>Déconnexion</button>
-    </div>}
     </>
   );
 };

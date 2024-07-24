@@ -275,28 +275,28 @@ export const initRoutes = (app:express.Express) => {
     });
 
     app.put('/users/:id/role', authMiddleware, roleMiddleware, async (req: Request, res: Response) => {
-        const userId = parseInt(req.params.id, 10);
-        const { roleId } = req.body;
-      
-        const validation = userUpdateRoleValidation.validate({ roleId });
-        if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details));
-          return;
+      const userId = parseInt(req.params.id, 10);
+      const { roleId, toBlockOn } = req.body;
+    
+      const validation = userUpdateRoleValidation.validate({ roleId });
+      if (validation.error) {
+        res.status(400).send(generateValidationErrorMessage(validation.error.details));
+        return;
+      }
+    
+      try {
+        const userUsecase = new UserUsecase(AppDataSource);
+        const updatedUser = await userUsecase.updateUserRole(userId, roleId, toBlockOn);
+        if (updatedUser) {
+          res.status(200).json({ message: 'Role updated successfully', user: updatedUser });
+        } else {
+          res.status(404).json({ error: 'User or Role not found' });
         }
-      
-        try {
-          const userUsecase = new UserUsecase(AppDataSource);
-          const updatedUser = await userUsecase.updateUserRole(userId, roleId);
-          if (updatedUser) {
-            res.status(200).json({ message: 'Role updated successfully', user: updatedUser });
-          } else {
-            res.status(404).json({ error: 'User or Role not found' });
-          }
-        } catch (error) {
-         ;
-          res.status(500).json({ error: 'Internal error' });
-        }
-      });    
+      } catch (error) {
+        res.status(500).json({ error: 'Internal error' });
+      }
+    });
+    
 
       app.get('/surveys', authMiddleware, async (req: Request, res: Response) => {
         const page = parseInt(req.query.page as string) || 1;

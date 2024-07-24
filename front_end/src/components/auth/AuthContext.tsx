@@ -3,10 +3,18 @@ import axios from 'axios';
 import { decodeToken } from './jwtDecode';
 import AuthContextType from '../../interfaces/auth/AuthContextType';
 
+interface User {
+  name: string;
+  role: string;
+  contribution: number;
+  toUpdateOn: Date | string;
+  toBlockOn: Date | string ;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<{ name: string; role: string, contribution:number,toUpdateOn:Date } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     checkUserRole();
@@ -36,13 +44,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.status === 200 && response.data && response.data.user) {
         const users = response.data.user;
         const currentUser = users.find((user: any) => user.id === userId);
-        if (currentUser) {
-          setUser({ name: currentUser.username, role: currentUser.roles.name,  contribution : currentUser.contribution, toUpdateOn : currentUser.toUpdateOn });
+        if (currentUser) { 
+
+          setUser({
+            name: currentUser.username,
+            role: currentUser.roles.name,
+            contribution: currentUser.contribution,
+            toUpdateOn: new Date(currentUser.toUpdateOn),
+            toBlockOn: new Date(currentUser.toBlockOn)
+          });
         } else {
           setUser(null);
         }
       }
-    } catch (error) { 
+    } catch (error) {
       setUser(null);
     }
   };

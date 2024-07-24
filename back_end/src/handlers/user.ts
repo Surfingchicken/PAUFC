@@ -17,54 +17,54 @@ export const UserHandler = (app: express.Express) => {
             if (error) {
                 return res.status(400).send(generateValidationErrorMessage(error.details));
             }
-
+    
             const { username, email, password } = value;
-
+    
             const hashedPassword = await hash(password, 10);
-
+    
             const userRepository = AppDataSource.getRepository(User);
             const roleRepository = AppDataSource.getRepository(Role);
-
+    
             const existingUsername = await userRepository.findOneBy({ username });
             if (existingUsername) {
                 return res.status(400).send({ error: "Le nom d'utilisateur est déjà utilisé" });
             }
-     
+    
             const existingEmail = await userRepository.findOneBy({ email });
             if (existingEmail) {
                 return res.status(400).send({ error: "L'email est déjà utilisé" });
             }
-
+    
             // Rechercher le rôle par ID
             const role = await roleRepository.findOneBy({ id: 3 }); // Utiliser l'ID du rôle que vous souhaitez assigner
-
+    
             if (!role) {
                 return res.status(400).send({ error: 'Role not found' });
             }
-
-            // Créer un nouvel utilisateur avec le rôle trouvé
+    
+            // Créer un nouvel utilisateur avec le rôle trouvé et contribution à 0
             const user = userRepository.create({
                 username,
                 email,
                 password: hashedPassword,
                 roles: role, // Assigner le rôle trouvé
+                contribution: false // Initialiser la contribution à 0
             });
-
-
+    
             await userRepository.save(user);
-
+    
             const secret = process.env.JWT_SECRET ?? "";
             const token = sign({ userId: user.id, username: user.username, roles: user.roles.id }, secret, { expiresIn: '1d' });
-
+    
             const tokenRepository = AppDataSource.getRepository(Token);
             await tokenRepository.save({ token, user });
-
+    
             return res.status(200).json({ token });
         } catch (error) { 
             return res.status(500).send({ error: 'Internal error retry later' });
         }
     });
-
+    
     // Connexion d'un utilisateur
     app.post('/auth/login', async (req: Request, res: Response) => {
         try {

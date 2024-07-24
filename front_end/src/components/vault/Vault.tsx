@@ -121,7 +121,7 @@ const Vault: React.FC = () => {
   return (
     <div>
       <h2>Coffre-fort numérique</h2>
-      {auth.user.role === 'admin' && (
+      {auth.user.role === 'admin' || auth.user.role ===  'user' && (
         <div>
           <p>Accès complet pour l'Admin.</p>
           <button onClick={handleToggleUploader}>
