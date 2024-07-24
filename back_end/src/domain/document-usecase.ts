@@ -12,7 +12,7 @@ export interface listDocumentFilter {
 }
 
 export class DocumentUsecase {
-  constructor(private db: DataSource) { }
+  constructor(private db: DataSource) {}
 
   async documentList(listDocumentFilter: listDocumentFilter): Promise<{ document: Document[] }> {
     const query = this.db.createQueryBuilder(Document, 'document');
@@ -39,7 +39,7 @@ export class DocumentUsecase {
     const newDocument = documentRepository.create({
       ...data,
       fileUrl: filePath,
-      originalName: data.file.originalname, 
+      originalName: data.file.originalname,
       createdBy: user,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -73,5 +73,25 @@ export class DocumentUsecase {
       .distinct(true)
       .getRawMany();
     return years.map(y => y.year);
+  }
+
+  async deleteDocument(documentId: number): Promise<void> {
+    const documentRepository = this.db.getRepository(Document);
+    const document = await documentRepository.findOneBy({ id: documentId });
+    if (!document) {
+      throw new Error("Document not found");
+    }
+    await documentRepository.remove(document);
+  }
+
+  async updateDocument(documentId: number, updatedTitle: string): Promise<Document> {
+    const documentRepository = this.db.getRepository(Document);
+    const document = await documentRepository.findOneBy({ id: documentId });
+    if (!document) {
+      throw new Error("Document not found");
+    }
+    document.title = updatedTitle;
+    document.updatedAt = new Date();
+    return await documentRepository.save(document);
   }
 }

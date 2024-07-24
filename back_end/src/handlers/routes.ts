@@ -437,7 +437,28 @@ export const initRoutes = (app:express.Express) => {
         }
       });
  
-      
+      app.delete('/documents/:id', async (req: Request, res: Response) => {
+        const documentUsecase = new DocumentUsecase(AppDataSource);
+        const documentId = parseInt(req.params.id, 10);
+        try {
+          await documentUsecase.deleteDocument(documentId);
+          res.status(200).json({ message: 'Document deleted successfully' });
+        } catch (error) {
+          res.status(500).json({ error});
+        }
+      });
+       
+      app.put('/documents/:id', async (req: Request, res: Response) => {
+        const documentUsecase = new DocumentUsecase(AppDataSource);
+        const documentId = parseInt(req.params.id, 10);
+        const { title } = req.body;
+        try {
+          const updatedDocument = await documentUsecase.updateDocument(documentId, title);
+          res.status(200).json({ message: 'Document updated successfully', document: updatedDocument });
+        } catch (error) {
+          res.status(500).json({ error});
+        }
+      });     
 
       app.get('/votes', authMiddleware, async (req: Request, res: Response) => {
         const { page = 1, result = 10 } = req.query;

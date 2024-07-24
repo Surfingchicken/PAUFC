@@ -40,6 +40,7 @@ const Vault: React.FC = () => {
       });
       setCategories(response.data);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -55,6 +56,7 @@ const Vault: React.FC = () => {
       });
       setYears(response.data);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -71,6 +73,7 @@ const Vault: React.FC = () => {
       setDocuments(response.data.document);
       setDocumentCount(response.data.document.length);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -85,6 +88,7 @@ const Vault: React.FC = () => {
       });
       setDocumentCount(response.data.count);
     } catch (error) {
+      console.error(error);
     }
   };
 
@@ -114,6 +118,38 @@ const Vault: React.FC = () => {
     setShowUploader(!showUploader);
   };
 
+  const handleDeleteDocument = async (documentId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:3000/documents/${documentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true
+      });
+      fetchDocuments();  
+    } catch (error) {
+      console.error('Error deleting document:', error);
+    }
+  };
+
+  const handleUpdateDocument = async (documentId: number, updatedTitle: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`http://localhost:3000/documents/${documentId}`, {
+        title: updatedTitle,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        withCredentials: true
+      });
+      fetchDocuments();  
+    } catch (error) {
+      console.error('Error updating document:', error);
+    }
+  };
+
   if (!auth.user) {
     return <p>Veuillez vous connecter.</p>;
   }
@@ -121,7 +157,7 @@ const Vault: React.FC = () => {
   return (
     <div>
       <h2>Coffre-fort numérique</h2>
-      {auth.user.role === 'admin' || auth.user.role ===  'user' && (
+      {auth.user.role === 'admin' && (
         <div>
           <p>Accès complet pour l'Admin.</p>
           <button onClick={handleToggleUploader}>
@@ -130,7 +166,17 @@ const Vault: React.FC = () => {
           {showUploader && <DocumentUploader onUploadSuccess={fetchDocuments} />}
         </div>
       )}
-      
+
+      {auth.user.role === 'user' && (
+        <div>
+          <p>Accès complet pour l'Admin.</p>
+          <button onClick={handleToggleUploader}>
+            {showUploader ? 'Masquer' : 'Ajouter un fichier'}
+          </button>
+          {showUploader && <DocumentUploader onUploadSuccess={fetchDocuments} />}
+        </div>
+      )}
+
       <div>
         <h3>Recherche de documents</h3>
         <div>
@@ -165,7 +211,7 @@ const Vault: React.FC = () => {
           <ul>
             {documents.map((doc) => (
               <li key={doc.id}>
-                <DocumentViewer document={doc} />
+                <DocumentViewer document={doc} onDelete={handleDeleteDocument} onUpdate={handleUpdateDocument} />
               </li>
             ))}
           </ul>

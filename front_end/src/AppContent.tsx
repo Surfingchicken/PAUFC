@@ -217,16 +217,14 @@ const AppContent: React.FC = () => {
       window.location.href = '/login';
     } catch (error) {
     }
-  };  
+  };
 
-  const checkContributionStatus = () => {
-    if (auth.user && (!auth.user.toBlockOn || new Date(auth.user.toBlockOn).getTime() === 0)) {
+  const checkTempAccount = () => {
+    if (auth.user && (!auth.user.toUpdateOn || new Date(auth.user.toBlockOn).getTime() === 0)) {
       setIsBlocked(false);
     } else if (auth.user) {
       const today = new Date();
       const toBlockOn = new Date(auth.user.toBlockOn);
-      console.log(today)
-      console.log(toBlockOn)
       if (today >= toBlockOn) {
         setIsBlocked(true);
       } else {
@@ -235,10 +233,10 @@ const AppContent: React.FC = () => {
     }
   };
   
-  
+ 
 
   useEffect(() => {
-    checkContributionStatus();
+    checkTempAccount();
   }, [auth.user]);
 
   if (isBlocked) {
@@ -286,7 +284,8 @@ const AppContent: React.FC = () => {
         <div className="main-content-home">
           {currentView === 'surveys' && (
             <>
-              {auth.user?.role === 'admin' || auth.user?.role === 'user' && <SurveyCreator onAddSurvey={addSurvey} />}
+              {auth.user?.role === 'admin' && <SurveyCreator onAddSurvey={addSurvey} />}
+              {auth.user?.role === 'user' && <SurveyCreator onAddSurvey={addSurvey} />} 
               {Array.isArray(surveys) && surveys.map((survey, index) => (
                 <div key={survey.id}>
                   <br />
@@ -309,7 +308,8 @@ const AppContent: React.FC = () => {
 
           {currentView === 'votes' && (
             <>
-              {auth.user?.role === 'admin' || auth.user?.role === 'user' && <VoteCreator onAddVote={addVote} />}
+              {auth.user?.role === 'admin' && <VoteCreator onAddVote={addVote} />}
+              {auth.user?.role === 'user' && <VoteCreator onAddVote={addVote} />} 
               {votes.map((vote, index) => (
                 <div key={vote.id}>
                   {vote.comment && <p>Commentaire: {vote.comment}</p>}
